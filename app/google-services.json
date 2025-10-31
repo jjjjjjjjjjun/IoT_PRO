@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "624934511697",
+    "firebase_url": "https://iot-backend-b3e01-default-rtdb.firebaseio.com",
+    "project_id": "iot-backend-b3e01",
+    "storage_bucket": "iot-backend-b3e01.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:624934511697:android:4f2c25e0fee4e8972d4470",
+        "android_client_info": {
+          "package_name": "com.example.iotcontrol"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBT5Kd5Ve3d_tcQbzihL2KMAotfnRY51q0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
