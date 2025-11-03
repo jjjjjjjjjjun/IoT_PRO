@@ -1,6 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
@@ -14,76 +13,92 @@
         android:orientation="vertical"
         android:padding="16dp">
 
+        <!-- 타이틀 -->
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
-            android:gravity="center_horizontal"
             android:text="스마트홈"
-            android:textColor="@color/black"
-            android:textSize="28sp"
-            android:textStyle="bold" />
+            android:textSize="32sp"
+            android:textStyle="bold"
+            android:textColor="#1A1A1A"
+            android:gravity="center"
+            android:layout_marginBottom="24dp" />
 
         <!-- 조도 센서 카드 -->
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
             android:layout_marginBottom="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="20dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp">
+                    android:layout_marginBottom="16dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="조도 센서"
-                        android:textSize="20sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/black"
+                        android:textColor="#212121"
                         android:layout_centerVertical="true"
-                        android:layout_alignParentStart="true"/>
+                        android:layout_alignParentStart="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switchLightSensor"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_alignParentEnd="true"/>
-                </RelativeLayout>
-
-                <RelativeLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content">
-
-                    <TextView
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="현재 밝기 (Luminance)"
-                        android:textSize="18sp"
-                        android:layout_centerVertical="true"/>
-
-                    <TextView
-                        android:id="@+id/tvLuminance"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="--- lux"
-                        android:textSize="20sp"
-                        android:textStyle="bold"
-                        android:textColor="#FFC107"
                         android:layout_alignParentEnd="true"
-                        android:layout_centerVertical="true"/>
+                        android:layout_centerVertical="true" />
                 </RelativeLayout>
 
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="현재 밝기"
+                    android:textSize="16sp"
+                    android:textColor="#666666"
+                    android:layout_marginBottom="8dp" />
+
+                <TextView
+                    android:id="@+id/tvLuminance"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="--- lux"
+                    android:textSize="36sp"
+                    android:textStyle="bold"
+                    android:textColor="#FF6D00"
+                    android:gravity="center"
+                    android:layout_marginBottom="12dp" />
+
+                <ProgressBar
+                    android:id="@+id/progressLux"
+                    style="?android:attr/progressBarStyleHorizontal"
+                    android:layout_width="match_parent"
+                    android:layout_height="16dp"
+                    android:max="1000"
+                    android:progress="0"
+                    android:progressTint="#4CAF50"
+                    android:backgroundTint="#E0E0E0"
+                    android:layout_marginBottom="12dp" />
+
+                <TextView
+                    android:id="@+id/tvLuxStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="보통"
+                    android:textSize="16sp"
+                    android:textColor="#424242"
+                    android:gravity="center" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -91,15 +106,15 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
             android:layout_marginBottom="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="20dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
@@ -110,36 +125,41 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="LCD 제어판"
-                        android:textSize="20sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/black"
+                        android:textColor="#212121"
                         android:layout_centerVertical="true"
-                        android:layout_alignParentStart="true"/>
+                        android:layout_alignParentStart="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switchLcd"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_alignParentEnd="true"/>
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
                 </RelativeLayout>
 
                 <EditText
                     android:id="@+id/etLcdText"
                     android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="영어만 지원합니다"
+                    android:layout_height="48dp"
+                    android:hint="영어 32자 이내"
                     android:inputType="text"
                     android:maxLines="1"
-                    android:layout_marginBottom="10dp"/>
+                    android:background="@android:drawable/edit_text"
+                    android:padding="12dp"
+                    android:layout_marginBottom="12dp" />
 
                 <Button
                     android:id="@+id/btnLcdSubmit"
                     android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="전송 (Send)"
-                    android:layout_gravity="end"/>
-
+                    android:layout_height="48dp"
+                    android:text="전송"
+                    android:textSize="16sp"
+                    android:textStyle="bold"
+                    android:textColor="@android:color/white"
+                    android:backgroundTint="#FF4081"
+                    android:layout_gravity="end" />
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
@@ -147,15 +167,15 @@
         <androidx.cardview.widget.CardView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:cardCornerRadius="12dp"
-            app:cardElevation="4dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="8dp"
             android:layout_marginBottom="20dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="16dp">
+                android:padding="20dp">
 
                 <RelativeLayout
                     android:layout_width="match_parent"
@@ -166,26 +186,26 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="RGB LED 제어"
-                        android:textSize="20sp"
+                        android:textSize="22sp"
                         android:textStyle="bold"
-                        android:textColor="@color/black"
+                        android:textColor="#212121"
                         android:layout_centerVertical="true"
-                        android:layout_alignParentStart="true"/>
+                        android:layout_alignParentStart="true" />
 
                     <androidx.appcompat.widget.SwitchCompat
                         android:id="@+id/switchLed"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:layout_centerVertical="true"
-                        android:layout_alignParentEnd="true"/>
+                        android:layout_alignParentEnd="true"
+                        android:layout_centerVertical="true" />
                 </RelativeLayout>
 
                 <View
                     android:id="@+id/viewColorPreview"
                     android:layout_width="match_parent"
-                    android:layout_height="50dp"
+                    android:layout_height="80dp"
                     android:background="#000000"
-                    android:layout_marginBottom="16dp"/>
+                    android:layout_marginBottom="20dp" />
 
                 <!-- R 슬라이더 -->
                 <LinearLayout
@@ -193,31 +213,32 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="12dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="R"
                         android:textColor="#E53935"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
                     <SeekBar
                         android:id="@+id/seekBarRed"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:max="255"
-                        android:progress="0"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp" />
+
                     <TextView
                         android:id="@+id/tvRedValue"
-                        android:layout_width="40dp"
+                        android:layout_width="48dp"
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textSize="16sp"
-                        android:gravity="end"/>
+                        android:gravity="end" />
                 </LinearLayout>
 
                 <!-- G 슬라이더 -->
@@ -226,31 +247,32 @@
                     android:layout_height="wrap_content"
                     android:orientation="horizontal"
                     android:gravity="center_vertical"
-                    android:layout_marginBottom="8dp">
+                    android:layout_marginBottom="12dp">
 
                     <TextView
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:text="G"
                         android:textColor="#43A047"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
                     <SeekBar
                         android:id="@+id/seekBarGreen"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:max="255"
-                        android:progress="0"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp" />
+
                     <TextView
                         android:id="@+id/tvGreenValue"
-                        android:layout_width="40dp"
+                        android:layout_width="48dp"
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textSize="16sp"
-                        android:gravity="end"/>
+                        android:gravity="end" />
                 </LinearLayout>
 
                 <!-- B 슬라이더 -->
@@ -265,43 +287,42 @@
                         android:layout_height="wrap_content"
                         android:text="B"
                         android:textColor="#1E88E5"
-                        android:textSize="18sp"
-                        android:textStyle="bold"/>
+                        android:textSize="20sp"
+                        android:textStyle="bold" />
+
                     <SeekBar
                         android:id="@+id/seekBarBlue"
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
                         android:max="255"
-                        android:progress="0"
-                        android:layout_marginStart="8dp"
-                        android:layout_marginEnd="8dp"/>
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="12dp" />
+
                     <TextView
                         android:id="@+id/tvBlueValue"
-                        android:layout_width="40dp"
+                        android:layout_width="48dp"
                         android:layout_height="wrap_content"
                         android:text="0"
                         android:textSize="16sp"
-                        android:gravity="end"/>
+                        android:gravity="end" />
                 </LinearLayout>
-
             </LinearLayout>
         </androidx.cardview.widget.CardView>
 
-        <!-- 음성 제어 버튼 추가 (LED 카드 아래) -->
+        <!-- Gemini 음성 제어 버튼 -->
         <Button
             android:id="@+id/btnVoiceControl"
             android:layout_width="match_parent"
-            android:layout_height="56dp"
-            android:text="음성으로 제어"
-            android:textSize="18sp"
+            android:layout_height="64dp"
+            android:text="Gemini로 제어"
+            android:textSize="20sp"
             android:textStyle="bold"
             android:textColor="@android:color/white"
-            android:background="@drawable/btn_voice_rounded"
+            android:backgroundTint="#1976D2"
             android:layout_marginHorizontal="16dp"
-            android:layout_marginTop="8dp"
-            android:layout_marginBottom="24dp"
-            android:elevation="6dp" />
-
+            android:layout_marginTop="12dp"
+            android:layout_marginBottom="32dp"
+            android:elevation="12dp" />
     </LinearLayout>
 </ScrollView>

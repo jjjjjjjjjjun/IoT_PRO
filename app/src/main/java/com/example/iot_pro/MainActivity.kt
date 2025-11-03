@@ -3,260 +3,238 @@ package com.example.iotcontrol
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.speech.RecognizerIntent
 import android.util.Log
+import android.widget.SeekBar
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import com.example.iotcontrol.databinding.ActivityMainBinding
 import com.google.ai.client.generativeai.GenerativeModel
-import com.google.firebase.database.FirebaseDatabase
-import com.google.firebase.database.DatabaseReference
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import com.google.firebase.database.*
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.*
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     private lateinit var db: DatabaseReference
-    private val VOICE_CODE = 1001
-
-    // === Gemini 설정 ===
     private val gemini = GenerativeModel(
         modelName = "gemini-2.0-flash",
         apiKey = "AIzaSyBcb7ZxFOKYkg272ahUHfQpe5hwb60cjoQ"
     )
 
+    private val handler = Handler(Looper.getMainLooper())
+    private var luxRunnable: Runnable? = null
+    private val LUX_INTERVAL = 500L // 0.5초
+
+    private val voiceLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == RESULT_OK) {
+            val text = result.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0)
+            text?.let { analyzeWithGemini(it) }
+        }
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Firebase 초기화
-        db = FirebaseDatabase.getInstance("https://iotbackend-827aa-default-rtdb.firebaseio.com/")
-            .reference
-
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        // === LCD 텍스트 전송 ===
+        db = FirebaseDatabase.getInstance("https://iotbackend-827aa-default-rtdb.firebaseio.com/")
+            .getReference("smart_home/device_01")
+
+        setupFirebaseListeners()
+        setupControls()
+        setupVoice()
+        setupLuxUpdater()
+    }
+
+    private fun setupFirebaseListeners() {
+        db.child("sensors").child("lux").addValueEventListener(object : ValueEventListener {
+            override fun onDataChange(snapshot: DataSnapshot) {
+                val lux = snapshot.getValue(Long::class.java) ?: 0L
+                lastLuxValue = lux
+                if (!binding.switchLightSensor.isChecked) {
+                    binding.tvLuminance.text = "-- lux"
+                    binding.progressLux.progress = 0
+                }
+            }
+            override fun onCancelled(error: DatabaseError) {}
+        })
+    }
+
+    private var lastLuxValue: Long = 0
+
+    private fun setupLuxUpdater() {
+        binding.switchLightSensor.setOnCheckedChangeListener { _, isChecked ->
+            if (isChecked) {
+                startLuxUpdates()
+                updateLuxDisplay()
+            } else {
+                stopLuxUpdates()
+                binding.tvLuminance.text = "-- lux"
+                binding.progressLux?.progress = 0
+            }
+        }
+    }
+
+    private fun startLuxUpdates() {
+        stopLuxUpdates()
+        luxRunnable = object : Runnable {
+            override fun run() {
+                updateLuxDisplay()
+                handler.postDelayed(this, LUX_INTERVAL)
+            }
+        }
+        handler.post(luxRunnable!!)
+    }
+
+    private fun stopLuxUpdates() {
+        luxRunnable?.let { handler.removeCallbacks(it) }
+        luxRunnable = null
+    }
+
+    private fun updateLuxDisplay() {
+        binding.tvLuminance.text = "$lastLuxValue lux"
+        binding.progressLux?.progress = lastLuxValue.coerceIn(0, 1000).toInt()
+    }
+
+    private fun setupControls() {
+        // LCD 전송 + 토스트
         binding.btnLcdSubmit.setOnClickListener {
-            val text = binding.etLcdText.text.toString()
-            sendToFirebase("lcd", mapOf("text" to text, "enabled" to true))
+            val text = binding.etLcdText.text.toString().trim()
+            if (text.isNotEmpty()) {
+                sendLcd(text, binding.switchLcd.isChecked)
+                Toast.makeText(this, "전송되었습니다", Toast.LENGTH_SHORT).show()
+            }
         }
 
-        // === RGB 실시간 전송 + 자동 스위치 ON ===
-        val updateColor: () -> Unit = {
+        binding.switchLcd.setOnCheckedChangeListener { _, isChecked ->
+            sendLcd(binding.etLcdText.text.toString(), isChecked)
+        }
+
+        // RGB 슬라이더
+        val updateColor = {
             val r = binding.seekBarRed.progress
             val g = binding.seekBarGreen.progress
             val b = binding.seekBarBlue.progress
-
             binding.tvRedValue.text = r.toString()
             binding.tvGreenValue.text = g.toString()
             binding.tvBlueValue.text = b.toString()
             binding.viewColorPreview.setBackgroundColor(Color.rgb(r, g, b))
-
-            sendRgbToFirebase(r, g, b)
-
-            // 슬라이더 움직이면 무조건 스위치 ON!
-            if (!binding.switchLed.isChecked && (r > 0 || g > 0 || b > 0)) {
-                binding.switchLed.isChecked = true
-                db.child("smart_home")
-                    .child("device_01")
-                    .child("controls")
-                    .child("led")
-                    .child("enabled")
-                    .setValue(true)
-                Log.d("FB", "슬라이더로 LED 자동 ON")
-            }
+            sendRgb(r, g, b)
+            if (r + g + b > 0) binding.switchLed.isChecked = true
         }
 
-        binding.seekBarRed.setOnSeekBarChangeListener(SeekBarListener(updateColor))
-        binding.seekBarGreen.setOnSeekBarChangeListener(SeekBarListener(updateColor))
-        binding.seekBarBlue.setOnSeekBarChangeListener(SeekBarListener(updateColor))
-
-        // === LED 스위치 (OFF 시 슬라이더 0으로!) ===
-        binding.switchLed.setOnCheckedChangeListener { _, isChecked ->
-            db.child("smart_home")
-                .child("device_01")
-                .child("controls")
-                .child("led")
-                .child("enabled")
-                .setValue(isChecked)
-                .addOnSuccessListener {
-                    Log.d("FB", "LED 전송 성공: $isChecked")
-                    if (!isChecked) {
-                        // OFF면 슬라이더도 0으로
-                        binding.seekBarRed.progress = 0
-                        binding.seekBarGreen.progress = 0
-                        binding.seekBarBlue.progress = 0
-                        sendRgbToFirebase(0, 0, 0)
-                    }
+        listOf(binding.seekBarRed, binding.seekBarGreen, binding.seekBarBlue).forEach {
+            it.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                    if (fromUser) updateColor()
                 }
-                .addOnFailureListener { Log.e("FB", "전송 실패", it) }
+                override fun onStartTrackingTouch(seekBar: SeekBar?) {}
+                override fun onStopTrackingTouch(seekBar: SeekBar?) {}
+            })
         }
 
-        // === LCD 스위치 ===
-        binding.switchLcd.setOnCheckedChangeListener { _, isChecked ->
-            sendToFirebase("lcd", mapOf("enabled" to isChecked))
-        }
-
-        // === 음성 인식 ===
-        binding.btnVoiceControl.setOnClickListener { startVoiceRecognition() }
-        binding.switchLcd.setOnLongClickListener {
-            startVoiceRecognition()
-            true
+        binding.switchLed.setOnCheckedChangeListener { _, isChecked ->
+            db.child("controls/led/enabled").setValue(isChecked)
+            if (!isChecked) setRgb(0, 0, 0)
         }
     }
 
-    // === 음성 인식 시작 ===
-    private fun startVoiceRecognition() {
-        val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
+    private fun setupVoice() {
+        binding.btnVoiceControl.setOnClickListener { startVoice() }
+    }
+
+    private fun startVoice() {
+        voiceLauncher.launch(Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
             putExtra(RecognizerIntent.EXTRA_LANGUAGE, "ko-KR")
-            putExtra(RecognizerIntent.EXTRA_PROMPT, "명령을 말하세요")
-        }
-        startActivityForResult(intent, VOICE_CODE)
+            putExtra(RecognizerIntent.EXTRA_PROMPT, "불 켜줘, 화면 꺼줘, 센서 켜줘")
+        })
     }
 
-    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        if (requestCode == VOICE_CODE && resultCode == RESULT_OK) {
-            val spokenText =
-                data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0) ?: return
-            analyzeWithGemini(spokenText)
-        }
-    }
-
-    // === Gemini 분석 ===
     private fun analyzeWithGemini(text: String) {
         CoroutineScope(Dispatchers.IO).launch {
             try {
                 val prompt = """
-                사용자가 말한 명령: "$text"
-                가능한 명령:
-                - "불 켜", "불 켜줘", "전구 켜", "LED 켜" → {"action": "white_light_on"}
-                - "불 꺼", "불 꺼줘", "LED 꺼", "전구 꺼" → {"action": "led_off"}
-                - "LCD에 [텍스트]" → {"action": "lcd_text", "text": "입력된 텍스트"}
-                - "빨간색", "빨강" → {"action": "rgb", "r":255, "g":0, "b":0}
-                - "초록색", "초록" → {"action": "rgb", "r":0, "g":255, "b":0}
-                - "파란색", "파랑" → {"action": "rgb", "r":0, "g":0, "b":255}
-                - 알 수 없으면 {"action": "unknown"}
-                JSON 형식으로만 응답.
-            """.trimIndent()
+                "$text" → 다음 중 하나만 JSON:
+                - 불 켜줘, LED 켜줘 → {"action":"led_on"}
+                - 불 꺼줘 → {"action":"led_off"}
+                - 화면 켜줘 → {"action":"lcd_on"}
+                - 화면 꺼줘 → {"action":"lcd_off"}
+                - 센서 켜줘 → {"action":"sensor_on"}
+                - 센서 꺼줘 → {"action":"sensor_off"}
+                - LCD에 (.*) → {"action":"lcd_text","text":"$1"}
+                """.trimIndent()
 
                 val response = gemini.generateContent(prompt)
-                val jsonResult = response.text?.trim() ?: "{}"
-                Log.d("Gemini", "분석 결과: $jsonResult")
+                val json = response.text?.trim()?.removeSurrounding("```json", "```")?.trim() ?: "{}"
+                Log.d("Gemini", json)
 
-                val map = parseGeminiJson(jsonResult)
+                val map = Gson().fromJson<Map<String, Any>>(json, object : TypeToken<Map<String, Any>>() {}.type) ?: emptyMap()
 
                 withContext(Dispatchers.Main) {
-                    when (map["action"]) {
-                        "white_light_on" -> {
-                            binding.seekBarRed.progress = 255
-                            binding.seekBarGreen.progress = 255
-                            binding.seekBarBlue.progress = 255
-                            sendRgbToFirebase(255, 255, 255)
+                    when (map["action"] as? String) {
+                        "led_on" -> {
                             binding.switchLed.isChecked = true
-                            db.child("smart_home").child("device_01").child("controls")
-                                .child("led").child("enabled").setValue(true)
-                            Log.d("Gemini", "백색등 + 스위치 ON!")
+                            Toast.makeText(this@MainActivity, "LED 켜짐", Toast.LENGTH_SHORT).show()
                         }
-
                         "led_off" -> {
-                            binding.seekBarRed.progress = 0
-                            binding.seekBarGreen.progress = 0
-                            binding.seekBarBlue.progress = 0
-                            sendRgbToFirebase(0, 0, 0)
                             binding.switchLed.isChecked = false
-                            db.child("smart_home").child("device_01").child("controls")
-                                .child("led").child("enabled").setValue(false)
-                            Log.d("Gemini", "RGB OFF + 스위치 OFF!")
+                            Toast.makeText(this@MainActivity, "LED 꺼짐", Toast.LENGTH_SHORT).show()
                         }
-
+                        "lcd_on" -> {
+                            binding.switchLcd.isChecked = true
+                            Toast.makeText(this@MainActivity, "화면 켜짐", Toast.LENGTH_SHORT).show()
+                        }
+                        "lcd_off" -> {
+                            binding.switchLcd.isChecked = false
+                            Toast.makeText(this@MainActivity, "화면 꺼짐", Toast.LENGTH_SHORT).show()
+                        }
+                        "sensor_on" -> {
+                            binding.switchLightSensor.isChecked = true
+                            Toast.makeText(this@MainActivity, "조도 센서 켜짐", Toast.LENGTH_SHORT).show()
+                        }
+                        "sensor_off" -> {
+                            binding.switchLightSensor.isChecked = false
+                            Toast.makeText(this@MainActivity, "조도 센서 꺼짐", Toast.LENGTH_SHORT).show()
+                        }
                         "lcd_text" -> {
-                            val lcdText = map["text"] as? String ?: ""
-                            binding.etLcdText.setText(lcdText)
-                            sendToFirebase("lcd", mapOf("text" to lcdText, "enabled" to true))
-                        }
-
-                        "rgb" -> {
-                            val r = (map["r"] as? Number)?.toInt() ?: 0
-                            val g = (map["g"] as? Number)?.toInt() ?: 0
-                            val b = (map["b"] as? Number)?.toInt() ?: 0
-
-                            binding.seekBarRed.progress = r.coerceIn(0, 255)
-                            binding.seekBarGreen.progress = g.coerceIn(0, 255)
-                            binding.seekBarBlue.progress = b.coerceIn(0, 255)
-
-                            sendRgbToFirebase(r, g, b)
-
-                            // ✅ Kotlin이 if를 식으로 착각하지 않게 run { }로 감쌈
-                            run {
-                                if (r > 0 || g > 0 || b > 0) {
-                                    binding.switchLed.isChecked = true
-                                    db.child("smart_home")
-                                        .child("device_01")
-                                        .child("controls")
-                                        .child("led")
-                                        .child("enabled")
-                                        .setValue(true)
-                                }
-                            }
-                        }
-
-
-                        else -> {
-                            Log.d("Gemini", "알 수 없는 명령: ${map["action"]}")
+                            val txt = (map["text"] as? String)?.take(32) ?: "Hello"
+                            binding.etLcdText.setText(txt)
+                            sendLcd(txt, true)
+                            Toast.makeText(this@MainActivity, "LCD에 '$txt' 표시", Toast.LENGTH_SHORT).show()
                         }
                     }
                 }
             } catch (e: Exception) {
-                Log.e("Gemini", "오류: ${e.message}")
+                Log.e("Gemini", "오류", e)
             }
         }
     }
 
-
-    // === JSON 파싱 ===
-    private fun parseGeminiJson(text: String): Map<String, Any> {
-        return try {
-            val cleaned = text.removePrefix("```json").removeSuffix("```").trim()
-            Gson().fromJson(cleaned, Map::class.java) as? Map<String, Any> ?: mapOf()
-        } catch (e: Exception) {
-            mapOf("action" to "unknown")
-        }
+    private fun sendRgb(r: Int, g: Int, b: Int) {
+        db.child("controls/rgb").setValue(mapOf("r" to r, "g" to g, "b" to b))
     }
 
-    // === Firebase 전송 ===
-    private fun sendToFirebase(path: String, value: Any) {
-        db.child("smart_home").child("device_01").child("controls").child(path)
-            .setValue(value)
-            .addOnSuccessListener { Log.d("Firebase", "$path 전송 성공") }
-            .addOnFailureListener { Log.e("Firebase", "전송 실패", it) }
+    private fun sendLcd(text: String, enabled: Boolean) {
+        val clean = text.trim().take(32)
+        db.child("display").setValue(mapOf("text" to clean, "enabled" to enabled))
+        db.child("controls/lcd/enabled").setValue(enabled)
     }
 
-    private fun sendRgbToFirebase(r: Int, g: Int, b: Int) {
-        db.child("smart_home")
-            .child("device_01")
-            .child("controls")
-            .child("rgb")
-            .setValue(mapOf("r" to r, "g" to g, "b" to b))
-            .addOnSuccessListener { Log.d("Firebase", "RGB 전송 성공") }
+    private fun setRgb(r: Int, g: Int, b: Int) {
+        binding.seekBarRed.progress = r
+        binding.seekBarGreen.progress = g
+        binding.seekBarBlue.progress = b
+        sendRgb(r, g, b)
     }
 
-    // === SeekBar 리스너 ===
-    inner class SeekBarListener(private val update: () -> Unit) :
-        android.widget.SeekBar.OnSeekBarChangeListener {
-
-        override fun onProgressChanged(
-            seekBar: android.widget.SeekBar?,
-            progress: Int,
-            fromUser: Boolean
-        ) {
-            update()
-        }
-
-        override fun onStartTrackingTouch(seekBar: android.widget.SeekBar?) {}
-        override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) {}
+    override fun onDestroy() {
+        super.onDestroy()
+        stopLuxUpdates()
     }
 }
