@@ -26,7 +26,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     private lateinit var db: DatabaseReference
     private val gemini = GenerativeModel(
-        modelName = "gemini-1.5-flash",
+        modelName = "gemini-2.0-flash",
         apiKey = "AIzaSyBcb7ZxFOKYkg272ahUHfQpe5hwb60cjoQ"
     )
 
